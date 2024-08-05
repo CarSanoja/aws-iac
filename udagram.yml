@@ -4,6 +4,19 @@ Parameters:
     Description: An environment name that will be prefixed to resource names
     Type: String
 
+  ImageId:
+    Description: The ID of the image to use for the instances
+    Type: AWS::EC2::Image::Id
+  
+  HomeIp:
+    Description: Your home IP address to allow SSH access to the bastion host
+    Type: String
+
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
 Resources:
   LBSecGroup:
     Type: AWS::EC2::SecurityGroup
@@ -21,20 +34,19 @@ Resources:
   WebServerSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow http access to our hosts from the LB Security Group
+      GroupDescription: Allow http access to our hosts from the LB Security Group and SSH from Bastion Host
       VpcId:
         Fn::ImportValue:
           !Sub "${EnvironmentName}-VPCID"
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        SourceSecurityGroupId: !Ref LBSecGroup
-      SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: 0
-        ToPort: 65535
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref LBSecGroup
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref BastionHostSecGroup
 
   WebAppLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -46,22 +58,27 @@ Resources:
             #!/bin/bash
             sudo apt-get update -y
             sudo apt-get install nginx -y
+            sudo apt-get install unzip awscli -y
+            sudo mkdir -p /var/www/html
+            sudo aws s3 cp s3://iac-workshop-static-content/index.html /var/www/html/index.html
             sudo service nginx start
-        ImageId: ami-0557a15b87f6559cf
+            pwd
+        ImageId: !Ref ImageId
+        KeyName: "dev2"
         SecurityGroupIds:
           - !Ref WebServerSecGroup
         InstanceType: t2.micro
         BlockDeviceMappings:
-        - DeviceName: "/dev/sdk"
-          Ebs:
-            VolumeSize: '10'
+          - DeviceName: "/dev/sdk"
+            Ebs:
+              VolumeSize: '10'
         IamInstanceProfile:
           Name: !Ref WebAppInstanceProfile
 
   WebAppInstanceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${EnvironmentName}-web-servers"
+      RoleName: !Ref EnvironmentName
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -78,9 +95,9 @@ Resources:
             Statement:
             - Effect: Allow
               Action:
+              - 's3:PutObject'
               - 's3:GetObject'
-              Resource:
-                - !Sub "arn:aws:s3:::any-bucket-name/*"
+              Resource: '*'
 
   WebAppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -151,3 +168,70 @@ Resources:
       VpcId: 
         Fn::ImportValue:
           Fn::Sub: "${EnvironmentName}-VPCID"
+
+  # StaticContentBucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     BucketName: !Sub "${EnvironmentName}-static-content"
+  #     VersioningConfiguration:
+  #       Status: Enabled
+  #     BucketEncryption:
+  #       ServerSideEncryptionConfiguration:
+  #         - ServerSideEncryptionByDefault:
+  #             SSEAlgorithm: AES256
+  #     PublicAccessBlockConfiguration:
+  #       BlockPublicAcls: false
+  #       IgnorePublicAcls: false
+  #       BlockPublicPolicy: false
+  #       RestrictPublicBuckets: false
+
+  # StaticContentBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref StaticContentBucket
+  #     PolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Sid: PublicReadGetObject
+  #           Effect: Allow
+  #           Principal: "*"
+  #           Action: "s3:GetObject"
+  #           Resource: !Sub "arn:aws:s3:::${EnvironmentName}-static-content/*"
+
+  BastionHostSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access to the bastion host and SSH to private instances
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref HomeIp
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  BastionHostInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref BastionHostSecGroup
+      SubnetId:
+        Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
+      KeyName: "dev2"
+      ImageId: !Ref ImageId
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-bastion-host"
+
+# Outputs:
+
+#   StaticContentBucketName:
+#     Description: Name of the S3 bucket for static content
+#     Value: !Ref StaticContentBucket
+#     Export:
+#       Name: !Sub ${EnvironmentName}-StaticContentBucket

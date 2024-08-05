@@ -1,0 +1,18 @@
+[
+	{
+		"ParameterKey": "EnvironmentName",
+		"ParameterValue": "iac-workshop"
+	},
+	{
+		"ParameterKey": "ImageId",
+		"ParameterValue": "ami-0a0e5d9c7acc336f1"
+	},
+	{
+		"ParameterKey": "HomeIp",
+		"ParameterValue": "200.35.196.206/32"
+	},
+	{
+		"ParameterKey": "KeyName",
+		"ParameterValue": "dev2"
+	}
+ ]
