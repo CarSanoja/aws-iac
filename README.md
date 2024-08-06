@@ -1,8 +1,10 @@
 # Udagram Deployment on AWS
 
+http://demo-s-webap-exjohx4phhws-1733183803.us-east-1.elb.amazonaws.com/
+
 ## Introduction
 
-This project deploys an App index html called Udagram to AWS using Infrastructure as Code (IaC) with CloudFormation. The infrastructure includes networking components, application servers, a bastion host, an S3 bucket for static content, and an Application Load Balancer.
+This project deploys an App index html called Udagram to AWS using Infrastructure as Code (IaC) with CloudFormation. The infrastructure includes networking components, udagram servers, a bastion host, an S3 bucket for static content, and an Application Load Balancer.
 
 ## Architecture Overview
 
@@ -10,9 +12,9 @@ This project deploys an App index html called Udagram to AWS using Infrastructur
 - **Subnets**: Two public and two private subnets for high availability.
 - **NAT Gateway**: Provides internet access to instances in the private subnets.
 - **Bastion Host**: Allows SSH access to instances in the private subnets.
-- **Application Load Balancer (ALB)**: Distributes incoming HTTP requests to application instances.
-- **Auto Scaling Group**: Ensures the application is always available by automatically adjusting the number of instances.
-- **S3 Bucket**: Stores static content accessible by the application.
+- **Application Load Balancer (ALB)**: Distributes incoming HTTP requests to udagram instances.
+- **Auto Scaling Group**: Ensures the udagram is always available by automatically adjusting the number of instances.
+- **S3 Bucket**: Stores static content accessible by the udagram.
 
 ## Prerequisites
 
@@ -23,8 +25,8 @@ This project deploys an App index html called Udagram to AWS using Infrastructur
 ## Files
 
 - `network.yml`: CloudFormation template for networking resources.
-- `application.yml`: CloudFormation template for application resources.
-- `parameters.json`: Parameter file with input values for CloudFormation templates.
+- `udagram.yml`: CloudFormation template for udagram resources.
+- `s3.yml`: CloudFormation for s3
 - `index.html`: Static HTML file to be uploaded to the S3 bucket.
 
 ## Deployment Steps
@@ -34,7 +36,7 @@ This project deploys an App index html called Udagram to AWS using Infrastructur
 1. Create the network stack using the `network.yml` template.
 
     ```bash
-    aws cloudformation create-stack --stack-name udagram-network --template-body file://network.yml --parameters file://parameters.json
+    aws cloudformation create-stack --stack-name udagram-network --template-body file://network.yml --parameters file://network.json
     ```
 
 2. Wait for the stack to be created. You can check the status using:
@@ -43,18 +45,24 @@ This project deploys an App index html called Udagram to AWS using Infrastructur
     aws cloudformation describe-stacks --stack-name udagram-network
     ```
 
-### Step 2: Create the Application Stack
+### Step 2: Create the S3 and then the Application Stack
 
-1. Create the application stack using the `application.yml` template.
+1. Create the udagram stack using the `udagram.yml` template.
 
     ```bash
-    aws cloudformation create-stack --stack-name udagram-application --template-body file://application.yml --parameters file://parameters.json --capabilities CAPABILITY_NAMED_IAM
+    aws cloudformation create-stack --stack-name udagram-s3 --template-body file://s3.yml --parameters file://s3.json --capabilities CAPABILITY_NAMED_IAM
+    ```
+
+    Now upload the index.html to the s3
+
+    ```bash
+    aws cloudformation create-stack --stack-name udagram-app --template-body file://udagram.yml --parameters file://udagram.json --capabilities CAPABILITY_NAMED_IAM
     ```
 
 2. Wait for the stack to be created. Check the status using:
 
     ```bash
-    aws cloudformation describe-stacks --stack-name udagram-application
+    aws cloudformation describe-stacks --stack-name udagram-app
     ```
 
 ### Step 3: Upload Static Content to S3
@@ -83,10 +91,10 @@ This project deploys an App index html called Udagram to AWS using Infrastructur
 
 To clean up the resources, delete the CloudFormation stacks in reverse order.
 
-1. Delete the application stack.
+1. Delete the udagram stack.
 
     ```bash
-    aws cloudformation delete-stack --stack-name udagram-application
+    aws cloudformation delete-stack --stack-name udagram-app
     ```
 
 2. Delete the network stack.
@@ -103,4 +111,4 @@ To clean up the resources, delete the CloudFormation stacks in reverse order.
 
 ## Conclusion
 
-This README provides the necessary steps to deploy and manage the Udagram application on AWS using CloudFormation. Following these steps will ensure a successful deployment and easy maintenance of the application infrastructure.
+This README provides the necessary steps to deploy and manage the Udagram udagram on AWS using CloudFormation. Following these steps will ensure a successful deployment and easy maintenance of the udagram infrastructure.
