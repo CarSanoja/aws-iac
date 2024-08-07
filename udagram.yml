@@ -198,3 +198,14 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${EnvironmentName}-bastion-host"
+
+Outputs:
+
+  DNS:
+    Description: The website URL
+    Value:
+      !Sub
+        - 'http://${DNSName}'
+        - {DNSName: !GetAtt 'WebAppLB.DNSName'}
+    Export:
+      Name: !Sub "${EnvironmentName}-SiteURL"

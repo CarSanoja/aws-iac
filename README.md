@@ -1,6 +1,6 @@
 # Udagram Deployment on AWS
 
-http://demo-s-webap-exjohx4phhws-1733183803.us-east-1.elb.amazonaws.com/
+http://udagra-WebAp-0aoYFaWeFEp8-624680557.us-east-1.elb.amazonaws.com
 
 ## Introduction
 
